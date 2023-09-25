@@ -4,11 +4,14 @@ import sys
 from rich.console import Console
 from rich.table import Table
 from rich.live import Live
+from pick import pick
+from pynput.keyboard import Key, Controller
 
 TEXT_SPEED = 0.07
 REFRESH_RATE = 1
 
 console = Console()
+keyboard = Controller()
 
 
 def print_slow(text, colorTxt="white"):
@@ -94,32 +97,34 @@ def main():
         "G19": {"P01": 0,  "P02": 0, "P03": 0, "P04": 0.25},
         "G20": {"P01": 0,  "P02": 0, "P03": 0, "P04": 0.25},
     }
-
     with Live(table2, refresh_per_second=4):
         for rbys, val in list_penyakit.items():
             time.sleep(0.2)
             table2.add_row(rbys, val)
 
-    print_slow(
-        "\nKami akan menampilkan Daftar Gejala untuk menemukan penyakit apa yang kamu alami\n")
-    with Live(table, refresh_per_second=REFRESH_RATE):
-        for row in list_gejala:
-            time.sleep(0.2)
-            table.add_row(row[0], row[1])
+    command = get_user_input(
+        "Lanjutkan memilih gejala yang anda alami dengan mengetik Yes : ")
 
-    # print("\n")
-    print_slow(
-        "jika anda memiliki beberapa gejala yang ada pada table, masukkan kode di bawah \n")
-    print_slow(
-        "pisahkan dengan tanda - pada kode, contoh G01-G02-G11 \n")
-    value = get_user_input("kode : ")
-    value = value.split("-")
+    if command == "yes" or command == "Yes":
+        title = "pilih gejala gejala yang kamu rasakan: "
+        selected = pick([data[1] for data in list_gejala], title, multiselect=True,
+                        min_selection_count=1)
+        print_slow("gejala yang anda alami \n")
+        for idx, item in enumerate(selected, start=1):
+            print_slow(f"{idx}. {item[0]}\n")
+    else:
+        print_slow("Baiklah")
+        # cm = get_user_input("yes/no")
+        exit()
+
     hasilAkhirBayes = {}
     for k in range(4):
         prob_1 = f"P0{k+1}"
         totalBayes = []
-        for i in value:
-            dataPakar = dataKeputusanPakar[i]
+        for i in selected:
+            valueKode = i[1]+1
+            dataKode = f"G{valueKode}" if valueKode > 9 else f'G0{valueKode}'
+            dataPakar = dataKeputusanPakar[dataKode]
             if (dataPakar[prob_1]):
                 result = dataPakar[prob_1] / \
                     (dataPakar["P01"] + dataPakar["P02"] +
@@ -142,9 +147,11 @@ def main():
     # print(presentasePenyakit)
     topKeyPercentage = max(presentasePenyakit, key=presentasePenyakit.get)
     print("\n")
+    print("Berdasarkan Pernyataan anda")
     print_slow(
-        f"Saudara {name}, anda terkena penyakit {list_penyakit[topKeyPercentage]} dengan presentase sebesar {round(presentasePenyakit[topKeyPercentage])}%")
-    print("\n\n")
+        f"Saudara {name}, anda terkena penyakit {list_penyakit[topKeyPercentage]} \npresentase {list_penyakit[topKeyPercentage]} sebesar {round(presentasePenyakit[topKeyPercentage])}%")
+    print("\n")
+
 
 if __name__ == "__main__":
     main()
